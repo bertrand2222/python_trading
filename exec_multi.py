@@ -6,20 +6,33 @@ import urllib.request, json
 import os
 import tensorflow as tf# This code has been tested with TensorFlow 1.6
 from sklearn.preprocessing import MinMaxScaler
-from data_generator import *
 import numpy as np
 import yfinance as yf
 
 symbol ="CA.PA"
 
 #def get_train_test_data(symbol):
-
-# df = yf.download(symbol, period="20y", interval = "1d").bfill()
+#df = yf.download(symbol, period="20y", interval = "1d").bfill()
+#df.to_pickle("df.pkl")
 df = pd.read_pickle("df.pkl")
 
-# df.to_pickle("df.pkl")
+#plot_cols = ['High', 'Low', 'Volume']
+#plot_features = df[plot_cols]
+##plot_features.index = date_time
+#_ = plot_features.plot(subplots=True)
 
-df.head()
+
+#plt.show()
+
+column_indices = {name: i for i, name in enumerate(df.columns)}
+
+n = len(df)
+train_df = df[0:int(n*0.7)]
+val_df = df[int(n*0.7):int(n*0.9)]
+test_df = df[int(n*0.9):]
+
+num_features = df.shape[1]
+
 
 stop
 
