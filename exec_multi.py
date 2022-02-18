@@ -8,6 +8,7 @@ import tensorflow as tf# This code has been tested with TensorFlow 1.6
 import numpy as np
 import yfinance as yf
 
+
 WIN_SIZE = 40
 symbol ="CA.PA"
 
@@ -33,9 +34,10 @@ column_indices = {name: i for i, name in enumerate(df.columns)}
 
 n = len(df)
 
-train_df = df[input_cols][0:int(n*0.7)].copy()
-val_df = df[input_cols][int(n*0.7):int(n*0.9)].copy()
-test_df = df[input_cols][int(n*0.9):].copy()
+df = df[input_cols]
+train_df = df[0:int(n*0.7)].copy()
+val_df = df[int(n*0.7):int(n*0.9)].copy()
+test_df = df[int(n*0.9):].copy()
 
 num_features = df.shape[1]
 
@@ -53,6 +55,8 @@ for dfi in [train_df, val_df, test_df] :
 
   dfi['Volume'] = dfi['Volume'].sub(vrmean, axis = 0)
   dfi['Volume'] = dfi['Volume'].divide(vrstd, axis = 0)
+
+  dfi.dropna(inplace= True)
 
 
 class WindowGenerator():
@@ -144,24 +148,120 @@ class WindowGenerator():
       self._example = result
     return result
 
+  def plot(self, model=None, plot_col='Close', max_subplots=3):
+    inputs, labels = self.example
+    plt.figure(figsize=(12, 8))
+    plot_col_index = self.column_indices[plot_col]
+    max_n = min(max_subplots, len(inputs))
+    for n in range(max_n):
+      plt.subplot(max_n, 1, n+1)
+      plt.ylabel(f'{plot_col} [normed]')
+      plt.plot(self.input_indices, inputs[n, :, plot_col_index],
+              label='Inputs', marker='.', zorder=-10)
 
-w2 = WindowGenerator(input_width=6, label_width=1, shift=1, label_columns=['Close'])
-print(w2)
+      if self.label_columns:
+        label_col_index = self.label_columns_indices.get(plot_col, None)
+      else:
+        label_col_index = plot_col_index
+
+      if label_col_index is None:
+        continue
+
+      plt.scatter(self.label_indices, labels[n, :, label_col_index],
+                  edgecolors='k', label='Labels', c='#2ca02c', s=64)
+      if model is not None:
+        predictions = model(inputs)
+        plt.scatter(self.label_indices, predictions[n, :, label_col_index],
+                    marker='X', edgecolors='k', label='Predictions',
+                    c='#ff7f0e', s=64)
+
+      if n == 0:
+        plt.legend()
+
+    plt.xlabel('Time [d]')
+
+val_performance = {}
+performance = {}
+
+class Baseline(tf.keras.Model):
+  def __init__(self, label_index=None):
+    super().__init__()
+    self.label_index = label_index
+
+  def call(self, inputs):
+    if self.label_index is None:
+      return inputs
+    result = inputs[:, :, self.label_index]
+    return result[:, :, tf.newaxis]
+
+MAX_EPOCHS = 20
+
+def compile_and_fit(model, window, patience=2):
+  early_stopping = tf.keras.callbacks.EarlyStopping(monitor='val_loss',
+                                                    patience=patience,
+                                                    mode='min')
+
+  model.compile(loss=tf.losses.MeanSquaredError(),
+                optimizer=tf.optimizers.Adam(),
+                metrics=[tf.metrics.MeanAbsoluteError()])
+
+  history = model.fit(window.train, epochs=MAX_EPOCHS,
+                      validation_data=window.val,
+                      callbacks=[early_stopping])
+  return history
 
 
-# Stack three slices, the length of the total window.
-example_window = tf.stack([np.array(train_df[:w2.total_window_size]),
-                           np.array(train_df[100:100+w2.total_window_size]),
-                           np.array(train_df[200:200+w2.total_window_size])])
+window = WindowGenerator(input_width=30, label_width=30, shift=30, label_columns=['Close'])
 
-example_inputs, example_labels = w2.split_window(example_window)
+DROPOUT = 0.2
 
-print('All shapes are: (batch, time, features)')
-print(f'Window shape: {example_window.shape}')
-print(f'Inputs shape: {example_inputs.shape}')
-print(f'Labels shape: {example_labels.shape}')
+##### 1 step model
+lstm_model = tf.keras.models.Sequential([
+    # Shape [batch, time, features] => [batch, time, lstm_units]
+    tf.keras.layers.LSTM(200, return_sequences=True, dropout=DROPOUT,),
+    # Shape => [batch, time, features]
+    tf.keras.layers.Dense(units=1)
+])
+
+#history = compile_and_fit(lstm_model, window)
+#val_performance['LSTM'] = lstm_model.evaluate(window.val)
+#performance['LSTM'] = lstm_model.evaluate(window.test, verbose=0)
+
+OUT_STEPS = 15
+
+multi_window = WindowGenerator(input_width=50,
+                               label_width=OUT_STEPS,
+                               shift=OUT_STEPS)
+
+##### multi step model
+multi_lstm_model = tf.keras.Sequential([
+    # Shape [batch, time, features] => [batch, lstm_units].
+    # Adding more `lstm_units` just overfits more quickly.
+    tf.keras.layers.LSTM(200, return_sequences=False, dropout = DROPOUT),
+    # Shape => [batch, out_steps*features].
+    tf.keras.layers.Dense(OUT_STEPS*num_features,
+                          kernel_initializer=tf.initializers.zeros()),
+    # Shape => [batch, out_steps, features].
+    tf.keras.layers.Reshape([OUT_STEPS, num_features])
+])
+
+history = compile_and_fit(multi_lstm_model, multi_window)
 
 
+multi_val_performance = {}
+multi_performance = {}
+multi_val_performance['LSTM'] = multi_lstm_model.evaluate(multi_window.val)
+multi_performance['LSTM'] = multi_lstm_model.evaluate(multi_window.test, verbose=0)
+multi_window.plot(multi_lstm_model)
+
+
+plt.show()
+## Stack three slices, the length of the total window.
+#example_window = tf.stack([np.array(train_df[:w2.total_window_size]),
+                           #np.array(train_df[100:100+w2.total_window_size]),
+                           #np.array(train_df[200:200+w2.total_window_size])])
+
+#example_inputs, example_labels = w2.split_window(example_window)
 
 
 
