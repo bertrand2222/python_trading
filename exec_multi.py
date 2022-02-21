@@ -1,4 +1,6 @@
 import pandas as pd
+import IPython
+import IPython.display
 # from pandas_datareader import data
 import matplotlib.pyplot as plt
 import datetime as dt
@@ -194,6 +196,53 @@ class Baseline(tf.keras.Model):
     result = inputs[:, :, self.label_index]
     return result[:, :, tf.newaxis]
 
+class FeedBack(tf.keras.Model):
+  def __init__(self, units, out_steps):
+    super().__init__()
+    self.out_steps = out_steps
+    self.units = units
+    self.lstm_cell = tf.keras.layers.LSTMCell(units)
+    # Also wrap the LSTMCell in an RNN to simplify the `warmup` method.
+    self.lstm_rnn = tf.keras.layers.RNN(self.lstm_cell, return_state=True)
+    self.dense = tf.keras.layers.Dense(num_features)
+
+  def warmup(self, inputs):
+    # inputs.shape => (batch, time, features)
+    # x.shape => (batch, lstm_units)
+    x, *state = self.lstm_rnn(inputs)
+
+    # predictions.shape => (batch, features)
+    prediction = self.dense(x)
+    return prediction, state
+
+  def call(self, inputs, training=None):
+    # Use a TensorArray to capture dynamically unrolled outputs.
+    predictions = []
+    # Initialize the LSTM state.
+    prediction, state = self.warmup(inputs)
+
+    # Insert the first prediction.
+    predictions.append(prediction)
+
+    # Run the rest of the prediction steps.
+    for n in range(1, self.out_steps):
+      # Use the last prediction as input.
+      x = prediction
+      # Execute one lstm step.
+      x, state = self.lstm_cell(x, states=state,
+                                training=training)
+      # Convert the lstm output to a prediction.
+      prediction = self.dense(x)
+      # Add the prediction to the output.
+      predictions.append(prediction)
+
+    # predictions.shape => (time, batch, features)
+    predictions = tf.stack(predictions)
+    # predictions.shape => (batch, time, features)
+    predictions = tf.transpose(predictions, [1, 0, 2])
+    return predictions
+
+
 MAX_EPOCHS = 20
 
 def compile_and_fit(model, window, patience=2):
@@ -209,7 +258,6 @@ def compile_and_fit(model, window, patience=2):
                       validation_data=window.val,
                       callbacks=[early_stopping])
   return history
-
 
 window = WindowGenerator(input_width=30, label_width=30, shift=30, label_columns=['Close'])
 
@@ -227,7 +275,7 @@ lstm_model = tf.keras.models.Sequential([
 #val_performance['LSTM'] = lstm_model.evaluate(window.val)
 #performance['LSTM'] = lstm_model.evaluate(window.test, verbose=0)
 
-OUT_STEPS = 15
+OUT_STEPS = 10
 
 multi_window = WindowGenerator(input_width=50,
                                label_width=OUT_STEPS,
@@ -245,24 +293,29 @@ multi_lstm_model = tf.keras.Sequential([
     tf.keras.layers.Reshape([OUT_STEPS, num_features])
 ])
 
-history = compile_and_fit(multi_lstm_model, multi_window)
+#history = compile_and_fit(multi_lstm_model, multi_window)
 
 
 multi_val_performance = {}
 multi_performance = {}
-multi_val_performance['LSTM'] = multi_lstm_model.evaluate(multi_window.val)
-multi_performance['LSTM'] = multi_lstm_model.evaluate(multi_window.test, verbose=0)
-multi_window.plot(multi_lstm_model)
 
-
-plt.show()
-## Stack three slices, the length of the total window.
-#example_window = tf.stack([np.array(train_df[:w2.total_window_size]),
-                           #np.array(train_df[100:100+w2.total_window_size]),
-                           #np.array(train_df[200:200+w2.total_window_size])])
+#multi_val_performance['LSTM'] = multi_lstm_model.evaluate(multi_window.val)
+#multi_performance['LSTM'] = multi_lstm_model.evaluate(multi_window.test, verbose=0)
+#multi_window.plot(multi_lstm_model)
 
 #example_inputs, example_labels = w2.split_window(example_window)
 
+feedback_model = FeedBack(units=200, out_steps=OUT_STEPS)
 
 
+history = compile_and_fit(feedback_model, multi_window)
+
+IPython.display.clear_output()
+
+multi_val_performance['AR LSTM'] = feedback_model.evaluate(multi_window.val)
+multi_performance['AR LSTM'] = feedback_model.evaluate(multi_window.test, verbose=0)
+multi_window.plot(feedback_model)
+
+
+plt.show()
 
