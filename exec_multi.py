@@ -252,7 +252,7 @@ def compile_model(model):
                 optimizer=tf.optimizers.Adam(),
                 metrics=[tf.metrics.MeanAbsoluteError()])
 
-def compile_and_fit(model, window, patience=2):
+def compile_and_fit(model, window, patience=2, name=None):
   early_stopping = tf.keras.callbacks.EarlyStopping(monitor='val_loss',
                                                     patience=patience,
                                                     mode='min')
@@ -262,6 +262,9 @@ def compile_and_fit(model, window, patience=2):
   history = model.fit(window.train, epochs=MAX_EPOCHS,
                       validation_data=window.val,
                       callbacks=[early_stopping])
+  if not name is None:
+    model.save_weights(name+'_checkpoints/my_checkpoints')
+
   return history
 
 window = WindowGenerator(input_width=30, label_width=30, shift=30, label_columns=['Close'])
