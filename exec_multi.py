@@ -300,7 +300,7 @@ multi_lstm_model = tf.keras.Sequential([
 ])
 
 #history = compile_and_fit(multi_lstm_model, multi_window)
-<<<<<<< HEAD
+
 #multi_lstm_model.save_weights('./multi_lstm_checkpoints/my_checkpoints')
 compile_model(multi_lstm_model)
 multi_lstm_model.load_weights('./multi_lstm_checkpoints/my_checkpoints')
@@ -311,8 +311,6 @@ multi_performance['LSTM'] = multi_lstm_model.evaluate(multi_window.test, verbose
 multi_window.plot(multi_lstm_model)
 
 
-=======
-
 
 multi_val_performance = {}
 multi_performance = {}
@@ -320,7 +318,6 @@ multi_performance = {}
 #multi_val_performance['LSTM'] = multi_lstm_model.evaluate(multi_window.val)
 #multi_performance['LSTM'] = multi_lstm_model.evaluate(multi_window.test, verbose=0)
 #multi_window.plot(multi_lstm_model)
->>>>>>> 5e6342c2589ad7608300213427f241a970009314
 
 
 #feedback_model = FeedBack(units=200, out_steps=OUT_STEPS)
@@ -335,7 +332,7 @@ feedback_model = FeedBack(units=200, out_steps=OUT_STEPS)
 #multi_performance['AR LSTM'] = feedback_model.evaluate(multi_window.test, verbose=0)
 #multi_window.plot(feedback_model)
 
-history = compile_and_fit(feedback_model, multi_window)
+#history = compile_and_fit(feedback_model, multi_window)
 
 IPython.display.clear_output()
 
@@ -343,8 +340,6 @@ multi_val_performance['AR LSTM'] = feedback_model.evaluate(multi_window.val)
 multi_performance['AR LSTM'] = feedback_model.evaluate(multi_window.test, verbose=0)
 multi_window.plot(feedback_model)
 
-
-plt.show()
 
 plt.show()
 
