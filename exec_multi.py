@@ -21,8 +21,9 @@ tk = yf.Ticker(symbol)
 eps = tk.info['trailingEps']
 
 #df = yf.download(symbol, period="20y", interval = "1d").bfill()
-#df.to_pickle("df.pkl")
-df = pd.read_pickle("df.pkl")
+#df.to_pickle("../python_trading_data/df.pkl")
+#stop
+df = pd.read_pickle("../python_trading_data/df.pkl")
 
 val_cols = ['Open' , 'High', 'Low', 'Close']
 input_cols = val_cols + ["Volume"]
@@ -287,52 +288,40 @@ multi_window = WindowGenerator(input_width=50,
                                label_width=OUT_STEPS,
                                shift=OUT_STEPS)
 
+
+multi_val_performance = {}
+multi_performance = {}
+
 ##### multi step model
-multi_lstm_model = tf.keras.Sequential([
-    # Shape [batch, time, features] => [batch, lstm_units].
-    # Adding more `lstm_units` just overfits more quickly.
-    tf.keras.layers.LSTM(200, return_sequences=False, dropout = DROPOUT),
-    # Shape => [batch, out_steps*features].
-    tf.keras.layers.Dense(OUT_STEPS*num_features,
-                          kernel_initializer=tf.initializers.zeros()),
-    # Shape => [batch, out_steps, features].
-    tf.keras.layers.Reshape([OUT_STEPS, num_features])
-])
+#multi_lstm_model = tf.keras.Sequential([
+    ## Shape [batch, time, features] => [batch, lstm_units].
+    ## Adding more `lstm_units` just overfits more quickly.
+    #tf.keras.layers.LSTM(200, return_sequences=False, dropout = DROPOUT),
+    ## Shape => [batch, out_steps*features].
+    #tf.keras.layers.Dense(OUT_STEPS*num_features,
+                          #kernel_initializer=tf.initializers.zeros()),
+    ## Shape => [batch, out_steps, features].
+    #tf.keras.layers.Reshape([OUT_STEPS, num_features])
+#])
+
 
 #history = compile_and_fit(multi_lstm_model, multi_window)
 
 #multi_lstm_model.save_weights('./multi_lstm_checkpoints/my_checkpoints')
-compile_model(multi_lstm_model)
-multi_lstm_model.load_weights('./multi_lstm_checkpoints/my_checkpoints')
+#compile_model(multi_lstm_model)
+#multi_lstm_model.load_weights('./multi_lstm_checkpoints/my_checkpoints')
 
-
-multi_val_performance['LSTM'] = multi_lstm_model.evaluate(multi_window.val)
-multi_performance['LSTM'] = multi_lstm_model.evaluate(multi_window.test, verbose=0)
-multi_window.plot(multi_lstm_model)
-
-
-
-multi_val_performance = {}
-multi_performance = {}
 
 #multi_val_performance['LSTM'] = multi_lstm_model.evaluate(multi_window.val)
 #multi_performance['LSTM'] = multi_lstm_model.evaluate(multi_window.test, verbose=0)
 #multi_window.plot(multi_lstm_model)
 
-
-#feedback_model = FeedBack(units=200, out_steps=OUT_STEPS)
-#history = compile_and_fit(feedback_model, multi_window)
-#feedback_model.save_weights('./feedback_checkpoints/my_checkpoints')
-#compile_model(feedback_model)
-#feedback_model.load_weights('./feedback_checkpoints/my_checkpoints')
-
+##### feedback_model
 feedback_model = FeedBack(units=200, out_steps=OUT_STEPS)
-
-#multi_val_performance['AR LSTM'] = feedback_model.evaluate(multi_window.val)
-#multi_performance['AR LSTM'] = feedback_model.evaluate(multi_window.test, verbose=0)
-#multi_window.plot(feedback_model)
-
 #history = compile_and_fit(feedback_model, multi_window)
+#feedback_model.save_weights('../python_trading_data/feedback_checkpoints/my_checkpoints')
+compile_model(feedback_model)
+feedback_model.load_weights('../python_trading_data/feedback_checkpoints/my_checkpoints')
 
 IPython.display.clear_output()
 
