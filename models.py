@@ -175,7 +175,7 @@ class FeedBack(tf.keras.Model):
     predictions = tf.transpose(predictions, [1, 0, 2])
     return predictions
 
-class MultiLSTMModel(tf.keras.Sequential):
+class MultiLSTM(tf.keras.Sequential):
   def __init__(self, window, units, out_steps, ):
     super().__init__()
     # Shape [batch, time, features] => [batch, lstm_units].

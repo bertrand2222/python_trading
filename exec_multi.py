@@ -90,18 +90,7 @@ multi_window = WindowGenerator(input_width=50,
                                label_columns = ["Close"])
 
 ##### multi step model
-#multi_lstm_model = tf.keras.Sequential([
-    ## Shape [batch, time, features] => [batch, lstm_units].
-    ## Adding more `lstm_units` just overfits more quickly.
-    #tf.keras.layers.LSTM(200, return_sequences=False, dropout = DROPOUT),
-    ## Shape => [batch, out_steps*features].
-    #tf.keras.layers.Dense(OUT_STEPS*num_features,
-                          #kernel_initializer=tf.initializers.zeros()),
-    ## Shape => [batch, out_steps, features].
-    #tf.keras.layers.Reshape([OUT_STEPS, num_features])
-#])
-
-
+#multi_lstm_model = MultiLSTM(window=multi_window, units=200, out_steps=OUT_STEPS)
 #history = compile_and_fit(multi_lstm_model, multi_window)
 
 #multi_lstm_model.save_weights('./multi_lstm_checkpoints/my_checkpoints')
