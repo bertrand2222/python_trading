@@ -12,6 +12,7 @@ import yfinance as yf
 
 
 WIN_SIZE = 40
+BATCH_SIZE = 200
 symbol ="CA.PA"
 
 tk = yf.Ticker(symbol)
@@ -121,7 +122,7 @@ class WindowGenerator():
         sequence_length=self.total_window_size,
         sequence_stride=1,
         shuffle=True,
-        batch_size=32,)
+        batch_size=BATCH_SIZE,)
 
     ds = ds.map(self.split_window)
 
@@ -150,7 +151,7 @@ class WindowGenerator():
       self._example = result
     return result
 
-  def plot(self, model=None, plot_col='Close', max_subplots=3):
+  def plot(self, model=None, plot_col='Close', max_subplots=5):
     inputs, labels = self.example
     plt.figure(figsize=(12, 8))
     plot_col_index = self.column_indices[plot_col]
@@ -245,14 +246,17 @@ class FeedBack(tf.keras.Model):
 
 MAX_EPOCHS = 20
 
+def compile_model(model):
+  model.compile(loss=tf.losses.MeanSquaredError(),
+                optimizer=tf.optimizers.Adam(),
+                metrics=[tf.metrics.MeanAbsoluteError()])
+
 def compile_and_fit(model, window, patience=2):
   early_stopping = tf.keras.callbacks.EarlyStopping(monitor='val_loss',
                                                     patience=patience,
                                                     mode='min')
 
-  model.compile(loss=tf.losses.MeanSquaredError(),
-                optimizer=tf.optimizers.Adam(),
-                metrics=[tf.metrics.MeanAbsoluteError()])
+  compile_model(model)
 
   history = model.fit(window.train, epochs=MAX_EPOCHS,
                       validation_data=window.val,
@@ -274,6 +278,8 @@ lstm_model = tf.keras.models.Sequential([
 #history = compile_and_fit(lstm_model, window)
 #val_performance['LSTM'] = lstm_model.evaluate(window.val)
 #performance['LSTM'] = lstm_model.evaluate(window.test, verbose=0)
+multi_val_performance = {}
+multi_performance = {}
 
 OUT_STEPS = 10
 
@@ -294,27 +300,28 @@ multi_lstm_model = tf.keras.Sequential([
 ])
 
 #history = compile_and_fit(multi_lstm_model, multi_window)
+#multi_lstm_model.save_weights('./multi_lstm_checkpoints/my_checkpoints')
+compile_model(multi_lstm_model)
+multi_lstm_model.load_weights('./multi_lstm_checkpoints/my_checkpoints')
 
 
-multi_val_performance = {}
-multi_performance = {}
-
-#multi_val_performance['LSTM'] = multi_lstm_model.evaluate(multi_window.val)
-#multi_performance['LSTM'] = multi_lstm_model.evaluate(multi_window.test, verbose=0)
-#multi_window.plot(multi_lstm_model)
-
-#example_inputs, example_labels = w2.split_window(example_window)
-
-feedback_model = FeedBack(units=200, out_steps=OUT_STEPS)
+multi_val_performance['LSTM'] = multi_lstm_model.evaluate(multi_window.val)
+multi_performance['LSTM'] = multi_lstm_model.evaluate(multi_window.test, verbose=0)
+multi_window.plot(multi_lstm_model)
 
 
-history = compile_and_fit(feedback_model, multi_window)
 
-IPython.display.clear_output()
 
-multi_val_performance['AR LSTM'] = feedback_model.evaluate(multi_window.val)
-multi_performance['AR LSTM'] = feedback_model.evaluate(multi_window.test, verbose=0)
-multi_window.plot(feedback_model)
+#feedback_model = FeedBack(units=200, out_steps=OUT_STEPS)
+#history = compile_and_fit(feedback_model, multi_window)
+#feedback_model.save_weights('./feedback_checkpoints/my_checkpoints')
+#compile_model(feedback_model)
+#feedback_model.load_weights('./feedback_checkpoints/my_checkpoints')
+
+
+#multi_val_performance['AR LSTM'] = feedback_model.evaluate(multi_window.val)
+#multi_performance['AR LSTM'] = feedback_model.evaluate(multi_window.test, verbose=0)
+#multi_window.plot(feedback_model)
 
 
 plt.show()
