@@ -2,7 +2,7 @@ import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
 import os
-BATCH_SIZE = 200
+BATCH_SIZE = 300
 DROPOUT = 0.2
 MAX_EPOCHS = 20
 DATA_PATH = "../python_trading_data"
@@ -231,10 +231,9 @@ def compile_and_fit(model, patience=2, name=None):
                       validation_data=model.window.val,
                       callbacks=[early_stopping])
   if not name is None:
-    model.save_weights(os.path.join(DATA_PATH,name+'_checkpoints/checkpoints'))
-
+    model.save_weights(os.path.join(DATA_PATH,name+'/checkpoints'))
   return history
 
 def compile_and_load(model, name):
     compile(model)
-    model.load_weights(os.path.join(DATA_PATH,name+'_checkpoints/checkpoints'))
+    model.load_weights(os.path.join(DATA_PATH,name+'/checkpoints'))

@@ -55,28 +55,26 @@ multi_window = WindowGenerator(input_width=50,
                                label_columns = ["Close"])
 
 ##### multi step model
-multi_lstm_model = MultiLSTM(window=multi_window, units=200, out_steps=OUT_STEPS, )
+#multi_lstm_model = MultiLSTM(window=multi_window, units=200, out_steps=OUT_STEPS, )
 #history = compile_and_fit(multi_lstm_model, name = "LSTM")
 
-compile_and_load(multi_lstm_model, "LSTM")
+#compile_and_load(multi_lstm_model, "LSTM")
 
-multi_val_performance['LSTM'] = multi_lstm_model.evaluate(multi_window.val)
-multi_performance['LSTM'] = multi_lstm_model.evaluate(multi_window.test, verbose=0)
-multi_window.plot(multi_lstm_model)
-plt.show()
+#multi_val_performance['LSTM'] = multi_lstm_model.evaluate(multi_window.val)
+#multi_performance['LSTM'] = multi_lstm_model.evaluate(multi_window.test, verbose=0)
+#multi_window.plot(multi_lstm_model)
+#plt.show()
 
 ##### feedback_model
-#feedback_model = FeedBack(window=multi_window, units=200, out_steps=OUT_STEPS)
-#history = compile_and_fit(feedback_model)
-#feedback_model.save_weights('../python_trading_data/feedback_checkpoints/my_checkpoints')
-#compile(feedback_model)
-#feedback_model.load_weights('../python_trading_data/feedback_checkpoints/my_checkpoints')
+feedback_model = FeedBack(window=multi_window, units=200, out_steps=OUT_STEPS)
+#history = compile_and_fit(feedback_model, name = "recursif_LSTM")
 
-#IPython.display.clear_output()
+compile_and_load(feedback_model, "recursif_LSTM")
 
-#multi_val_performance['AR LSTM'] = feedback_model.evaluate(multi_window.val)
-#multi_performance['AR LSTM'] = feedback_model.evaluate(multi_window.test, verbose=0)
-#multi_window.plot(feedback_model)
+
+multi_val_performance['AR LSTM'] = feedback_model.evaluate(multi_window.val)
+multi_performance['AR LSTM'] = feedback_model.evaluate(multi_window.test, verbose=0)
+multi_window.plot(feedback_model)
 
 
 plt.show()
