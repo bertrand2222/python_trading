@@ -1,33 +1,27 @@
 import pandas as pd
-
-# from pandas_datareader import data
 import matplotlib.pyplot as plt
 import datetime as dt
 import os
-import tensorflow as tf# This code has been tested with TensorFlow 1.6
-#from sklearn.preprocessing import MinMaxScaler
+import tensorflow as tf
 import numpy as np
 import yfinance as yf
 from models import *
 
-
-
 symbol ="CA.PA"
 
-tk = yf.Ticker(symbol)
+
 
 if not os.path.isdir(DATA_PATH):
     os.mkdirs(DATA_PATH)
 
+#tk = yf.Ticker(symbol)
 #earning per share
-eps = tk.info['trailingEps']
+#eps = tk.info['trailingEps']
 
 #df = yf.download(symbol, period="20y", interval = "1d").bfill()
 #df.to_pickle(os.path.join(DATA_PATH,"df.pkl"))
 
 df = pd.read_pickle(os.path.join(DATA_PATH,"df.pkl"))
-
-
 
 #plot_features = df[plot_cols]
 ##plot_features.index = date_time
@@ -35,22 +29,16 @@ df = pd.read_pickle(os.path.join(DATA_PATH,"df.pkl"))
 
 #plt.show()
 
-column_indices = {name: i for i, name in enumerate(df.columns)}
-
-
-
-
 val_performance = {}
 performance = {}
 
-
 ##### 1 step model
-lstm_model = tf.keras.models.Sequential([
-    # Shape [batch, time, features] => [batch, time, lstm_units]
-    tf.keras.layers.LSTM(200, return_sequences=True, dropout=DROPOUT,),
-    # Shape => [batch, time, features]
-    tf.keras.layers.Dense(units=1)
-])
+#lstm_model = tf.keras.models.Sequential([
+    #Shape [batch, time, features] => [batch, time, lstm_units]
+    #tf.keras.layers.LSTM(200, return_sequences=True, dropout=DROPOUT,),
+    #Shape => [batch, time, features]
+    #tf.keras.layers.Dense(units=1)
+#])
 
 #history = compile_and_fit(lstm_model)
 #val_performance['LSTM'] = lstm_model.evaluate(window.val)
@@ -67,7 +55,7 @@ multi_window = WindowGenerator(input_width=50,
                                label_columns = ["Close"])
 
 ##### multi step model
-multi_lstm_model = MultiLSTM(window=multi_window, units=200, out_steps=OUT_STEPS)
+multi_lstm_model = MultiLSTM(window=multi_window, units=200, out_steps=OUT_STEPS, )
 #history = compile_and_fit(multi_lstm_model, name = "LSTM")
 
 compile_and_load(multi_lstm_model, "LSTM")
