@@ -1,20 +1,28 @@
 import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
-
+import os
 BATCH_SIZE = 200
 DROPOUT = 0.2
 MAX_EPOCHS = 20
+DATA_PATH = "../python_trading_data"
+VAL_COLS = ['Open' , 'High', 'Low', 'Close']
+INPUT_COLS = VAL_COLS + ["Volume"]
+R_WIN_SIZE = 40
 
 class WindowGenerator():
   def __init__(self, input_width, label_width, shift,
-               train_df, val_df, test_df,
+               df,
                label_columns=None):
     # Store the raw data.
-    self.train_df = train_df
-    self.val_df = val_df
-    self.test_df = test_df
-    self.num_features = train_df.shape[1]
+    df = df[INPUT_COLS]
+    self.df = df
+    n = len(df)
+    self.train_df = df[0:int(n*0.7)].copy()
+    self.val_df = df[int(n*0.7):int(n*0.9)].copy()
+    self.test_df = df[int(n*0.9):].copy()
+    self.num_features = df.shape[1]
+    self.normalize_data()
 
     # Work out the label column indices.
     self.label_columns = label_columns
@@ -22,7 +30,7 @@ class WindowGenerator():
       self.label_columns_indices = {name: i for i, name in
                                     enumerate(label_columns)}
     self.column_indices = {name: i for i, name in
-                           enumerate(train_df.columns)}
+                           enumerate(df.columns)}
 
     # Work out the window parameters.
     self.input_width = input_width
@@ -44,6 +52,25 @@ class WindowGenerator():
         f'Input indices: {self.input_indices}',
         f'Label indices: {self.label_indices}',
         f'Label column name(s): {self.label_columns}'])
+
+  def normalize_data(self):
+
+    #Normalisation
+    for dfi in [self.train_df, self.val_df, self.test_df] :
+        # calculate Simple Moving Average with 20 days window
+        sma = dfi['Close'].rolling(window=R_WIN_SIZE).mean()
+        vrmean = dfi['Volume'].rolling(window = R_WIN_SIZE).mean()
+        # calculate the standar deviation
+        rstd = dfi['Close'].rolling(window=R_WIN_SIZE).std()
+        vrstd = dfi['Volume'].rolling(window = R_WIN_SIZE).std()
+
+        dfi[VAL_COLS] = dfi[VAL_COLS].sub(sma, axis = 0)
+        dfi[VAL_COLS]  =dfi[VAL_COLS].divide(rstd, axis = 0)
+
+        dfi['Volume'] = dfi['Volume'].sub(vrmean, axis = 0)
+        dfi['Volume'] = dfi['Volume'].divide(vrstd, axis = 0)
+
+        dfi.dropna(inplace= True)
 
   def split_window(self, features):
     inputs = features[:, self.input_slice, :]
@@ -178,6 +205,7 @@ class FeedBack(tf.keras.Model):
 class MultiLSTM(tf.keras.Sequential):
   def __init__(self, window, units, out_steps, ):
     super().__init__()
+    self.window = window
     # Shape [batch, time, features] => [batch, lstm_units].
     # Adding more `lstm_units` just overfits more quickly.
     self.add(tf.keras.layers.LSTM(units, return_sequences=False, dropout = DROPOUT))
@@ -197,12 +225,16 @@ def compile_and_fit(model, patience=2, name=None):
                                                     patience=patience,
                                                     mode='min')
 
-  compile_model(model)
+  compile(model)
 
   history = model.fit(model.window.train, epochs=MAX_EPOCHS,
                       validation_data=model.window.val,
                       callbacks=[early_stopping])
   if not name is None:
-    model.save_weights(name+'_checkpoints/checkpoints')
+    model.save_weights(os.path.join(DATA_PATH,name+'_checkpoints/checkpoints'))
 
   return history
+
+def compile_and_load(model, name):
+    compile(model)
+    model.load_weights(os.path.join(DATA_PATH,name+'_checkpoints/checkpoints'))
