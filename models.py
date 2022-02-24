@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import os
 BATCH_SIZE = 300
 DROPOUT = 0.2
-MAX_EPOCHS = 20
+MAX_EPOCHS = 30
 DATA_PATH = "../python_trading_data"
 VAL_COLS = ['Open' , 'High', 'Low', 'Close']
 INPUT_COLS = VAL_COLS + ["Volume"]

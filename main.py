@@ -55,14 +55,14 @@ multi_window = WindowGenerator(input_width=50,
                                label_columns = ["Close"])
 
 ##### multi step model
-#multi_lstm_model = MultiLSTM(window=multi_window, units=200, out_steps=OUT_STEPS, )
-#history = compile_and_fit(multi_lstm_model, name = "LSTM")
+multi_lstm_model = MultiLSTM(window=multi_window, units=200, out_steps=OUT_STEPS, )
+history = compile_and_fit(multi_lstm_model, name = "LSTM")
 
 #compile_and_load(multi_lstm_model, "LSTM")
 
-#multi_val_performance['LSTM'] = multi_lstm_model.evaluate(multi_window.val)
-#multi_performance['LSTM'] = multi_lstm_model.evaluate(multi_window.test, verbose=0)
-#multi_window.plot(multi_lstm_model)
+multi_val_performance['LSTM'] = multi_lstm_model.evaluate(multi_window.val)
+multi_performance['LSTM'] = multi_lstm_model.evaluate(multi_window.test, verbose=0)
+multi_window.plot(multi_lstm_model)
 #plt.show()
 
 ##### feedback_model
@@ -77,5 +77,21 @@ multi_performance['AR LSTM'] = feedback_model.evaluate(multi_window.test, verbos
 multi_window.plot(feedback_model)
 
 
-plt.show()
 
+
+x = np.arange(len(multi_performance))
+width = 0.3
+
+metric_name = 'mean_absolute_error'
+metric_index = lstm_model.metrics_names.index('mean_absolute_error')
+val_mae = [v[metric_index] for v in multi_val_performance.values()]
+test_mae = [v[metric_index] for v in multi_performance.values()]
+
+plt.bar(x - 0.17, val_mae, width, label='Validation')
+plt.bar(x + 0.17, test_mae, width, label='Test')
+plt.xticks(ticks=x, labels=multi_performance.keys(),
+           rotation=45)
+plt.ylabel(f'MAE (average over all times and outputs)')
+_ = plt.legend()
+
+plt.show()
