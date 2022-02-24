@@ -3,7 +3,7 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 import os
 BATCH_SIZE = 300
-DROPOUT = 0.2
+DROPOUT = 0.1
 MAX_EPOCHS = 30
 DATA_PATH = "../python_trading_data"
 VAL_COLS = ['Open' , 'High', 'Low', 'Close']
@@ -163,7 +163,7 @@ class FeedBack(tf.keras.Model):
     self.units = units
     self.lstm_cell = tf.keras.layers.LSTMCell(units, dropout = DROPOUT)
     # Also wrap the LSTMCell in an RNN to simplify the `warmup` method.
-    self.lstm_rnn = tf.keras.layers.RNN(self.lstm_cell, return_state=True)
+    self.lstm_rnn = tf.keras.layers.RNN(self.lstm_cell, return_state=True,)
     self.dense = tf.keras.layers.Dense(window.num_features)
 
   def warmup(self, inputs):
@@ -208,6 +208,7 @@ class MultiLSTM(tf.keras.Sequential):
     self.window = window
     # Shape [batch, time, features] => [batch, lstm_units].
     # Adding more `lstm_units` just overfits more quickly.
+    self.add(tf.keras.layers.LSTM(units, return_sequences=True, dropout = DROPOUT))
     self.add(tf.keras.layers.LSTM(units, return_sequences=False, dropout = DROPOUT))
     # Shape => [batch, out_steps*features].
     self.add(tf.keras.layers.Dense(out_steps*window.num_features,
