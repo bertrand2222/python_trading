@@ -8,7 +8,7 @@ MAX_EPOCHS = 20
 DATA_PATH = "../python_trading_data"
 VAL_COLS = ['Open' , 'High', 'Low', 'Close']
 INPUT_COLS = VAL_COLS + ["Volume"]
-R_WIN_SIZE = 40
+R_WIN_SIZE = 50
 
 class WindowGenerator():
   def __init__(self, input_width, label_width, shift,
@@ -19,8 +19,8 @@ class WindowGenerator():
     self.df = df
     n = len(df)
     self.train_df = df[0:int(n*0.7)].copy()
-    self.val_df = df[int(n*0.7):int(n*0.9)].copy()
-    self.test_df = df[int(n*0.9):].copy()
+    self.val_df = df[int(n*0.7)-R_WIN_SIZE:int(n*0.9)].copy()
+    self.test_df = df[int(n*0.9)-R_WIN_SIZE:].copy()
     self.num_features = df.shape[1]
     self.normalize_data()
 
