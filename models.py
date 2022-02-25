@@ -189,7 +189,7 @@ class FeedBack(tf.keras.Model):
       # Use the last prediction as input.
       x = prediction
       # Execute one lstm step.
-      x, state = self.lstm_rnn(x, states=state,
+      x, state = self.lstm_cell(x, states=state,
                                 training=training)
       # Convert the lstm output to a prediction.
       prediction = self.dense(x)
