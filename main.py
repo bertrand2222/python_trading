@@ -46,8 +46,8 @@ performance = {}
 multi_val_performance = {}
 multi_performance = {}
 
-OUT_STEPS = 10
-
+OUT_STEPS = 15
+LSTM_UNITS = [200,150]
 multi_window = WindowGenerator(input_width=50,
                                label_width=OUT_STEPS,
                                shift=OUT_STEPS,
@@ -55,26 +55,26 @@ multi_window = WindowGenerator(input_width=50,
                                label_columns = ["Close"])
 
 ##### multi step model
-#multi_lstm_model = MultiLSTM(window=multi_window, units=200, out_steps=OUT_STEPS, )
-#history = compile_and_fit(multi_lstm_model, name = "LSTM")
+multi_lstm_model = MultiLSTM(window=multi_window, nb_units=LSTM_UNITS, out_steps=OUT_STEPS, )
+history = compile_and_fit(multi_lstm_model, name = "LSTM")
 
-##compile_and_load(multi_lstm_model, "LSTM")
+#compile_and_load(multi_lstm_model, "LSTM")
 
-#multi_val_performance['LSTM'] = multi_lstm_model.evaluate(multi_window.val)
-#multi_performance['LSTM'] = multi_lstm_model.evaluate(multi_window.test, verbose=0)
-#multi_window.plot(multi_lstm_model)
+multi_val_performance['LSTM'] = multi_lstm_model.evaluate(multi_window.val)
+multi_performance['LSTM'] = multi_lstm_model.evaluate(multi_window.test, verbose=0)
+multi_window.plot(multi_lstm_model)
 
 
 ##### feedback_model
-feedback_model = FeedBack(window=multi_window, units=200, out_steps=OUT_STEPS)
-history = compile_and_fit(feedback_model, name = "recursif_LSTM")
+#feedback_model = FeedBack(window=multi_window, nb_units=LSTM_UNITS, out_steps=OUT_STEPS)
+#history = compile_and_fit(feedback_model, name = "recursif_LSTM")
 
-#compile_and_load(feedback_model, "recursif_LSTM")
+##compile_and_load(feedback_model, "recursif_LSTM")
 
 
-multi_val_performance['AR LSTM'] = feedback_model.evaluate(multi_window.val)
-multi_performance['AR LSTM'] = feedback_model.evaluate(multi_window.test, verbose=0)
-multi_window.plot(feedback_model)
+#multi_val_performance['AR LSTM'] = feedback_model.evaluate(multi_window.val)
+#multi_performance['AR LSTM'] = feedback_model.evaluate(multi_window.test, verbose=0)
+#multi_window.plot(feedback_model)
 
 
 #x = np.arange(len(multi_performance))

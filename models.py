@@ -156,21 +156,23 @@ class WindowGenerator():
     plt.xlabel('Time [d]')
 
 class FeedBack(tf.keras.Model):
-  def __init__(self, window, units, out_steps, ):
+  def __init__(self, window, nb_units, out_steps, ):
     super().__init__()
     self.window = window
     self.out_steps = out_steps
-    self.units = units
-    self.lstm_cell = tf.keras.layers.LSTMCell(units, dropout = DROPOUT)
+    self.nb_units = nb_units
+    #self.lstm_cell = tf.keras.layers.LSTMCell(units, dropout = DROPOUT)
+    self.lstm_cells = [tf.keras.layers.LSTMCell(nb, dropout = DROPOUT) for nb in nb_units]
+
+
     # Also wrap the LSTMCell in an RNN to simplify the `warmup` method.
-    self.lstm_rnn = tf.keras.layers.RNN(self.lstm_cell, return_state=True,)
+    self.lstm_rnn = tf.keras.layers.RNN(self.lstm_cells, return_state=True,)
     self.dense = tf.keras.layers.Dense(window.num_features)
 
   def warmup(self, inputs):
     # inputs.shape => (batch, time, features)
     # x.shape => (batch, lstm_units)
     x, *state = self.lstm_rnn(inputs)
-
     # predictions.shape => (batch, features)
     prediction = self.dense(x)
     return prediction, state
@@ -180,7 +182,6 @@ class FeedBack(tf.keras.Model):
     predictions = []
     # Initialize the LSTM state.
     prediction, state = self.warmup(inputs)
-
     # Insert the first prediction.
     predictions.append(prediction)
 
@@ -189,8 +190,10 @@ class FeedBack(tf.keras.Model):
       # Use the last prediction as input.
       x = prediction
       # Execute one lstm step.
-      x, state = self.lstm_cell(x, states=state,
-                                training=training)
+      x, *state = self.lstm_rnn(tf.expand_dims(x,1), initial_state=state, training=training)
+
+      #x, state = self.lstm_cell(x, states=state, training=training)
+
       # Convert the lstm output to a prediction.
       prediction = self.dense(x)
       # Add the prediction to the output.
@@ -203,13 +206,15 @@ class FeedBack(tf.keras.Model):
     return predictions
 
 class MultiLSTM(tf.keras.Sequential):
-  def __init__(self, window, units, out_steps, ):
+  def __init__(self, window, nb_units, out_steps, ):
     super().__init__()
     self.window = window
     # Shape [batch, time, features] => [batch, lstm_units].
     # Adding more `lstm_units` just overfits more quickly.
-    self.add(tf.keras.layers.LSTM(units, return_sequences=True, dropout = DROPOUT))
-    self.add(tf.keras.layers.LSTM(units, return_sequences=False, dropout = DROPOUT))
+
+    for nb in nb_units[:-1]:
+      self.add(tf.keras.layers.LSTM(nb, return_sequences=True, dropout = DROPOUT))
+    self.add(tf.keras.layers.LSTM(nb_units[-1], return_sequences=False, dropout = DROPOUT))
     # Shape => [batch, out_steps*features].
     self.add(tf.keras.layers.Dense(out_steps*window.num_features,
                           kernel_initializer=tf.initializers.zeros()))
