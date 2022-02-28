@@ -3,12 +3,16 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 import os
 BATCH_SIZE = 300
-DROPOUT = 0.1
 MAX_EPOCHS = 30
 DATA_PATH = "../python_trading_data"
 VAL_COLS = ['Open' , 'High', 'Low', 'Close']
+OTHER_PRICE_COLS = ['Open' , 'High', 'Low',]
 INPUT_COLS = VAL_COLS + ["Volume"]
 R_WIN_SIZE = 50
+
+#learning_rate = tf.keras.optimizers.schedules.ExponentialDecay(
+    #0.001, 1, 0.5, staircase=True, name=None
+#)
 
 class WindowGenerator():
   def __init__(self, input_width, label_width, shift,
@@ -57,6 +61,15 @@ class WindowGenerator():
 
     #Normalisation
     for dfi in [self.train_df, self.val_df, self.test_df] :
+
+
+        #dfi[OTHER_PRICE_COLS] = dfi[OTHER_PRICE_COLS].divide(dfi["Close"], axis = 0)
+        #rmean = dfi.rolling(window=R_WIN_SIZE).mean()
+        #rstd = dfi.rolling(window=R_WIN_SIZE).std()
+
+        #dfi.loc[:] = dfi.sub(rmean, axis = 0)
+        #dfi.loc[:] = dfi.divide(rstd, axis = 0)
+
         # calculate Simple Moving Average with 20 days window
         sma = dfi['Close'].rolling(window=R_WIN_SIZE).mean()
         vrmean = dfi['Volume'].rolling(window = R_WIN_SIZE).mean()
@@ -156,13 +169,13 @@ class WindowGenerator():
     plt.xlabel('Time [d]')
 
 class FeedBack(tf.keras.Model):
-  def __init__(self, window, nb_units, out_steps, ):
+  def __init__(self, window, nb_units, out_steps, dropout ):
     super().__init__()
     self.window = window
     self.out_steps = out_steps
     self.nb_units = nb_units
     #self.lstm_cell = tf.keras.layers.LSTMCell(units, dropout = DROPOUT)
-    self.lstm_cells = [tf.keras.layers.LSTMCell(nb, dropout = DROPOUT) for nb in nb_units]
+    self.lstm_cells = [tf.keras.layers.LSTMCell(nb, dropout = dropout ) for nb in nb_units]
 
 
     # Also wrap the LSTMCell in an RNN to simplify the `warmup` method.
@@ -206,15 +219,15 @@ class FeedBack(tf.keras.Model):
     return predictions
 
 class MultiLSTM(tf.keras.Sequential):
-  def __init__(self, window, nb_units, out_steps, ):
+  def __init__(self, window, nb_units, out_steps, dropout ):
     super().__init__()
     self.window = window
     # Shape [batch, time, features] => [batch, lstm_units].
     # Adding more `lstm_units` just overfits more quickly.
 
     for nb in nb_units[:-1]:
-      self.add(tf.keras.layers.LSTM(nb, return_sequences=True, dropout = DROPOUT))
-    self.add(tf.keras.layers.LSTM(nb_units[-1], return_sequences=False, dropout = DROPOUT))
+      self.add(tf.keras.layers.LSTM(nb, return_sequences=True, dropout = dropout))
+    self.add(tf.keras.layers.LSTM(nb_units[-1], return_sequences=False, dropout = dropout))
     # Shape => [batch, out_steps*features].
     self.add(tf.keras.layers.Dense(out_steps*window.num_features,
                           kernel_initializer=tf.initializers.zeros()))

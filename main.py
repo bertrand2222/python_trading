@@ -9,8 +9,6 @@ from models import *
 
 symbol ="CA.PA"
 
-
-
 if not os.path.isdir(DATA_PATH):
     os.mkdir(DATA_PATH)
 
@@ -19,9 +17,9 @@ if not os.path.isdir(DATA_PATH):
 #eps = tk.info['trailingEps']
 
 df = yf.download(symbol, period="20y", interval = "1d").bfill()
-df.to_pickle(os.path.join(DATA_PATH,"df.pkl"))
+#df.to_pickle(os.path.join(DATA_PATH,"df.pkl"))
 
-#df = pd.read_pickle(os.path.join(DATA_PATH,"df.pkl"))
+df = pd.read_pickle(os.path.join(DATA_PATH,"df.pkl"))
 
 #plot_features = df[plot_cols]
 ##plot_features.index = date_time
@@ -32,30 +30,22 @@ df.to_pickle(os.path.join(DATA_PATH,"df.pkl"))
 val_performance = {}
 performance = {}
 
-##### 1 step model
-#lstm_model = tf.keras.models.Sequential([
-    #Shape [batch, time, features] => [batch, time, lstm_units]
-    #tf.keras.layers.LSTM(200, return_sequences=True, dropout=DROPOUT,),
-    #Shape => [batch, time, features]
-    #tf.keras.layers.Dense(units=1)
-#])
-
-#history = compile_and_fit(lstm_model)
-#val_performance['LSTM'] = lstm_model.evaluate(window.val)
-#performance['LSTM'] = lstm_model.evaluate(window.test, verbose=0)
 multi_val_performance = {}
 multi_performance = {}
 
-OUT_STEPS = 15
-LSTM_UNITS = [200,150]
-multi_window = WindowGenerator(input_width=50,
+INP_STEPS = 50
+OUT_STEPS = 10
+LSTM_UNITS = [200,200]
+DROPOUT = 0.1
+
+multi_window = WindowGenerator(input_width=INP_STEPS,
                                label_width=OUT_STEPS,
                                shift=OUT_STEPS,
                                df=df,
                                label_columns = ["Close"])
 
 ##### multi step model
-multi_lstm_model = MultiLSTM(window=multi_window, nb_units=LSTM_UNITS, out_steps=OUT_STEPS, )
+multi_lstm_model = MultiLSTM(window=multi_window, nb_units=LSTM_UNITS, out_steps=OUT_STEPS, dropout = DROPOUT)
 history = compile_and_fit(multi_lstm_model, name = "LSTM")
 
 #compile_and_load(multi_lstm_model, "LSTM")
@@ -66,7 +56,7 @@ multi_window.plot(multi_lstm_model)
 
 
 ##### feedback_model
-#feedback_model = FeedBack(window=multi_window, nb_units=LSTM_UNITS, out_steps=OUT_STEPS)
+#feedback_model = FeedBack(window=multi_window, nb_units=LSTM_UNITS, out_steps=OUT_STEPS, dropout = DROPOUT)
 #history = compile_and_fit(feedback_model, name = "recursif_LSTM")
 
 ##compile_and_load(feedback_model, "recursif_LSTM")
