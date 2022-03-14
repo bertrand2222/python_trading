@@ -136,8 +136,13 @@ class WindowGenerator():
       self._example = result
     return result
 
+  def get_last_inputs(self):
+    return tf.expand_dims(tf.constant(self.test_df.iloc[-self.input_width:]),0)
+
   def plot(self, model=None, plot_col='Close', max_subplots=5):
     inputs, labels = self.example
+    if model is not None:
+      predictions = model(inputs)
     plt.figure(figsize=(12, 8))
     plot_col_index = self.column_indices[plot_col]
     max_n = min(max_subplots, len(inputs))
@@ -158,7 +163,6 @@ class WindowGenerator():
       plt.scatter(self.label_indices, labels[n, :, label_col_index],
                   edgecolors='k', label='Labels', c='#2ca02c', s=64)
       if model is not None:
-        predictions = model(inputs)
         plt.scatter(self.label_indices, predictions[n, :, label_col_index],
                     marker='X', edgecolors='k', label='Predictions',
                     c='#ff7f0e', s=64)
@@ -167,6 +171,8 @@ class WindowGenerator():
         plt.legend()
 
     plt.xlabel('Time [d]')
+
+
 
 class FeedBack(tf.keras.Model):
   def __init__(self, window, nb_units, out_steps, dropout ):
@@ -250,9 +256,14 @@ def compile_and_fit(model, patience=2, name=None):
                       validation_data=model.window.val,
                       callbacks=[early_stopping])
   if not name is None:
-    model.save_weights(os.path.join(DATA_PATH,name+'/checkpoints'))
+    #model.save_weights(os.path.join(DATA_PATH,name+'/checkpoints'))
+    model.save(os.path.join(DATA_PATH,name+'/model'))
   return history
 
 def compile_and_load(model, name):
     compile(model)
     model.load_weights(os.path.join(DATA_PATH,name+'/checkpoints'))
+
+def load_model(name):
+    model = tf.keras.models.load_model(os.path.join(DATA_PATH,name+'/model'))
+    return model
