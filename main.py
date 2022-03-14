@@ -45,16 +45,19 @@ multi_window = WindowGenerator(input_width=INP_STEPS,
                                label_columns = ["Close"])
 
 ##### multi step model
-multi_lstm_model = MultiLSTM(window=multi_window, nb_units=LSTM_UNITS, out_steps=OUT_STEPS, dropout = DROPOUT)
-history = compile_and_fit(multi_lstm_model, name = "LSTM")
+#multi_lstm_model = MultiLSTM(window=multi_window, nb_units=LSTM_UNITS, out_steps=OUT_STEPS, dropout = DROPOUT)
+#history = compile_and_fit(multi_lstm_model, name = "LSTM")
 
+multi_lstm_model = load_model('LSTM')
 #compile_and_load(multi_lstm_model, "LSTM")
-
+last_inputs = multi_window.get_last_inputs()
+print(last_inputs)
+prediction = multi_lstm_model(last_inputs)
+print(prediction)
+stop
 multi_val_performance['LSTM'] = multi_lstm_model.evaluate(multi_window.val)
 multi_performance['LSTM'] = multi_lstm_model.evaluate(multi_window.test, verbose=0)
 multi_window.plot(multi_lstm_model)
-
-
 ##### feedback_model
 #feedback_model = FeedBack(window=multi_window, nb_units=LSTM_UNITS, out_steps=OUT_STEPS, dropout = DROPOUT)
 #history = compile_and_fit(feedback_model, name = "recursif_LSTM")
