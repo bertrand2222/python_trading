@@ -2,13 +2,7 @@ import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
 import os
-BATCH_SIZE = 300
-MAX_EPOCHS = 30
-DATA_PATH = "../python_trading_data"
-VAL_COLS = ['Open' , 'High', 'Low', 'Close']
-OTHER_PRICE_COLS = ['Open' , 'High', 'Low',]
-INPUT_COLS = VAL_COLS + ["Volume"]
-R_WIN_SIZE = 50
+from constant import *
 
 #learning_rate = tf.keras.optimizers.schedules.ExponentialDecay(
     #0.001, 1, 0.5, staircase=True, name=None
@@ -71,10 +65,10 @@ class WindowGenerator():
         #dfi.loc[:] = dfi.divide(rstd, axis = 0)
 
         # calculate Simple Moving Average with 20 days window
-        sma = dfi['Close'].rolling(window=R_WIN_SIZE).mean()
+        sma = dfi["Close"].rolling(window=R_WIN_SIZE).mean()
         vrmean = dfi['Volume'].rolling(window = R_WIN_SIZE).mean()
         # calculate the standar deviation
-        rstd = dfi['Close'].rolling(window=R_WIN_SIZE).std()
+        rstd = dfi["Close"].rolling(window=R_WIN_SIZE).std()
         vrstd = dfi['Volume'].rolling(window = R_WIN_SIZE).std()
 
         dfi[VAL_COLS] = dfi[VAL_COLS].sub(sma, axis = 0)
@@ -136,7 +130,8 @@ class WindowGenerator():
       self._example = result
     return result
 
-  def get_last_inputs(self):
+  @property
+  def last_inputs(self):
     return tf.expand_dims(tf.constant(self.test_df.iloc[-self.input_width:]),0)
 
   def plot(self, model=None, plot_col='Close', max_subplots=5):
@@ -256,7 +251,7 @@ def compile_and_fit(model, patience=2, name=None):
                       validation_data=model.window.val,
                       callbacks=[early_stopping])
   if not name is None:
-    #model.save_weights(os.path.join(DATA_PATH,name+'/checkpoints'))
+    # model.save_weights(os.path.join(DATA_PATH,name+'/checkpoints'))
     model.save(os.path.join(DATA_PATH,name+'/model'))
   return history
 

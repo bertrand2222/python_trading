@@ -5,6 +5,7 @@ import os
 import tensorflow as tf
 import numpy as np
 import yfinance as yf
+from constant import *
 from models import *
 
 symbol ="CA.PA"
@@ -19,7 +20,7 @@ if not os.path.isdir(DATA_PATH):
 df = yf.download(symbol, period="20y", interval = "1d").bfill()
 #df.to_pickle(os.path.join(DATA_PATH,"df.pkl"))
 
-df = pd.read_pickle(os.path.join(DATA_PATH,"df.pkl"))
+#df = pd.read_pickle(os.path.join(DATA_PATH,"df.pkl"))
 
 #plot_features = df[plot_cols]
 ##plot_features.index = date_time
@@ -33,10 +34,7 @@ performance = {}
 multi_val_performance = {}
 multi_performance = {}
 
-INP_STEPS = 50
-OUT_STEPS = 10
-LSTM_UNITS = [200,200]
-DROPOUT = 0.1
+
 
 multi_window = WindowGenerator(input_width=INP_STEPS,
                                label_width=OUT_STEPS,
@@ -45,19 +43,23 @@ multi_window = WindowGenerator(input_width=INP_STEPS,
                                label_columns = ["Close"])
 
 ##### multi step model
-#multi_lstm_model = MultiLSTM(window=multi_window, nb_units=LSTM_UNITS, out_steps=OUT_STEPS, dropout = DROPOUT)
-#history = compile_and_fit(multi_lstm_model, name = "LSTM")
+multi_lstm_model = MultiLSTM(window=multi_window, nb_units=LSTM_UNITS, out_steps=OUT_STEPS, dropout = DROPOUT)
+history = compile_and_fit(multi_lstm_model, name = "LSTM")
 
-multi_lstm_model = load_model('LSTM')
-#compile_and_load(multi_lstm_model, "LSTM")
-last_inputs = multi_window.get_last_inputs()
-print(last_inputs)
+# multi_lstm_model = load_model('LSTM')
+# compile_and_load(multi_lstm_model, "LSTM")
+
+last_inputs = multi_window.last_inputs
+# print(last_inputs)
 prediction = multi_lstm_model(last_inputs)
-print(prediction)
-stop
+# print(prediction)
+
 multi_val_performance['LSTM'] = multi_lstm_model.evaluate(multi_window.val)
 multi_performance['LSTM'] = multi_lstm_model.evaluate(multi_window.test, verbose=0)
 multi_window.plot(multi_lstm_model)
+
+
+
 ##### feedback_model
 #feedback_model = FeedBack(window=multi_window, nb_units=LSTM_UNITS, out_steps=OUT_STEPS, dropout = DROPOUT)
 #history = compile_and_fit(feedback_model, name = "recursif_LSTM")
@@ -65,9 +67,9 @@ multi_window.plot(multi_lstm_model)
 ##compile_and_load(feedback_model, "recursif_LSTM")
 
 
-#multi_val_performance['AR LSTM'] = feedback_model.evaluate(multi_window.val)
-#multi_performance['AR LSTM'] = feedback_model.evaluate(multi_window.test, verbose=0)
-#multi_window.plot(feedback_model)
+# multi_val_performance['AR LSTM'] = feedback_model.evaluate(multi_window.val)
+# multi_performance['AR LSTM'] = feedback_model.evaluate(multi_window.test, verbose=0)
+# multi_window.plot(feedback_model)
 
 
 #x = np.arange(len(multi_performance))
