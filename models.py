@@ -1,26 +1,44 @@
+from time import perf_counter
 import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
 import os
 from constant import *
-
+import pandas as pd
+from typing import Union
+from sklearn.preprocessing import MinMaxScaler
 #learning_rate = tf.keras.optimizers.schedules.ExponentialDecay(
     #0.001, 1, 0.5, staircase=True, name=None
 #)
 
+def z_score(s : Union[pd.Series, pd.DataFrame] , periods : int = 50, shift = 1) :
+      rolling = s.rolling(window= periods)
+      sma = rolling.mean().shift(shift)
+      std = rolling.std().shift(shift)
+
+      r = s.sub(sma, axis = 0).divide( std, axis = 0)
+      return r
+
+
+
 class WindowGenerator():
   def __init__(self, input_width, label_width, shift,
-               df,
-               label_columns=None):
+               df : pd.DataFrame, input_cols, cols_to_rolling_normalize = [],
+               label_columns=None, r_win_size = 20):
     # Store the raw data.
-    df = df[INPUT_COLS]
+    df = df[input_cols]
     self.df = df
-    n = len(df)
-    self.train_df = df[0:int(n*0.7)].copy()
-    self.val_df = df[int(n*0.7)-R_WIN_SIZE:int(n*0.9)].copy()
-    self.test_df = df[int(n*0.9)-R_WIN_SIZE:].copy()
+    self.cols_to_rolling_normalize = cols_to_rolling_normalize
+    self.r_win_size = r_win_size
+    self.df_scaled = self.get_normalized_df()
+
+    n = len(self.df_scaled.index)
+    self.train_df = self.df_scaled[0:int(n*0.7)].copy()
+    self.val_df = self.df_scaled[int(n*0.7):int(n*0.9)].copy()
+    self.test_df = self.df_scaled[int(n*0.9):].copy()
     self.num_features = df.shape[1]
-    self.normalize_data()
+    print("num features : ", self.num_features)
+
 
     # Work out the label column indices.
     self.label_columns = label_columns
@@ -51,33 +69,54 @@ class WindowGenerator():
         f'Label indices: {self.label_indices}',
         f'Label column name(s): {self.label_columns}'])
 
-  def normalize_data(self):
+  
 
-    #Normalisation
-    for dfi in [self.train_df, self.val_df, self.test_df] :
+  def get_normalized_df(self) -> pd.DataFrame:
+
+    df_scaled = self.df.copy()
+    df_scaled[self.cols_to_normalize] = z_score(self.df[self.cols_to_rolling_normalize], self.r_win_size)
+    return(df_scaled.dropna())
+  #   #Normalisation
+  #   for dfi in [self.train_df, self.val_df, self.test_df] :
+
+  #       # calculate Simple Moving Average with 20 days window
 
 
-        #dfi[OTHER_PRICE_COLS] = dfi[OTHER_PRICE_COLS].divide(dfi["Close"], axis = 0)
-        #rmean = dfi.rolling(window=R_WIN_SIZE).mean()
-        #rstd = dfi.rolling(window=R_WIN_SIZE).std()
+  #       if self.normalizing_method == 'scale_to_close':
+  #         sma = dfi["Close"].rolling(window= self.r_win_size).mean()
+  #         std = dfi["Close"].rolling(window= self.r_win_size).std()
 
-        #dfi.loc[:] = dfi.sub(rmean, axis = 0)
-        #dfi.loc[:] = dfi.divide(rstd, axis = 0)
+  #         dfi[PRICE_COLS] = dfi[PRICE_COLS].sub(sma, axis = 0)
+  #         dfi[PRICE_COLS]  =dfi[PRICE_COLS].divide( 2 * std, axis = 0)
+  #         if 'Volume' in dfi.columns :
+  #           vmean = dfi['Volume'].mean()
+  #           vstd = dfi['Volume'].std()
+  #           dfi['Volume'] = dfi['Volume'].sub(vmean, axis = 0)
+  #           dfi['Volume'] = dfi['Volume'].divide(vstd, axis = 0)
 
-        # calculate Simple Moving Average with 20 days window
-        sma = dfi["Close"].rolling(window=R_WIN_SIZE).mean()
-        vrmean = dfi['Volume'].rolling(window = R_WIN_SIZE).mean()
-        # calculate the standar deviation
-        rstd = dfi["Close"].rolling(window=R_WIN_SIZE).std()
-        vrstd = dfi['Volume'].rolling(window = R_WIN_SIZE).std()
+  #       elif self.normalizing_method == 'scale_to_all' :
 
-        dfi[VAL_COLS] = dfi[VAL_COLS].sub(sma, axis = 0)
-        dfi[VAL_COLS]  =dfi[VAL_COLS].divide(rstd, axis = 0)
+  #         dfi[self.cols_to_normalize] = z_score(dfi[self.cols_to_normalize], self.r_win_size) 
 
-        dfi['Volume'] = dfi['Volume'].sub(vrmean, axis = 0)
-        dfi['Volume'] = dfi['Volume'].divide(vrstd, axis = 0)
+ 
+  #       elif self.normalizing_method == 'diff_high_low' : 
+  #         mean_ac = (dfi['Close'] + dfi['Open']) / 2
+  #         sma = dfi["Close"].rolling(window= self.r_win_size).mean()
+  #         std = dfi["Close"].rolling(window= self.r_win_size).std()
 
-        dfi.dropna(inplace= True)
+  #         close_init = dfi['Close']
+  #         dfi['Close'] = dfi['Close'].sub(sma, axis = 0)
+  #         dfi['Close']  =dfi['Close'].divide( 2 * std, axis = 0)
+
+  #         dfi["High"] = dfi["High"].sub(mean_ac, axis = 0).divide(mean_ac, axis = 0)     
+  #         dfi['High'] = dfi['High'].sub(dfi['High'].mean(), axis = 0).divide(dfi['High'].std())
+  #         dfi["Low"] = dfi["Low"].sub(mean_ac, axis = 0).divide(mean_ac, axis = 0)     
+  #         dfi['Low'] = dfi['Low'].sub(dfi['Low'].mean(), axis = 0).divide(dfi['Low'].std())
+  #         dfi["Open"] = dfi["Open"].sub(close_init, axis = 0).divide(close_init, axis = 0)     
+  #         dfi['Open'] = dfi['Open'].sub(dfi['Open'].mean(), axis = 0).divide(dfi['Open'].std())
+        
+ 
+  #       dfi.dropna(inplace= True)
 
   def split_window(self, features):
     inputs = features[:, self.input_slice, :]
@@ -119,25 +158,73 @@ class WindowGenerator():
   def test(self):
     return self.make_dataset(self.test_df)
 
+  # @property
+  # def real(self):
+  #   return self.make_dataset(self.df)
+
   @property
   def example(self):
     """Get and cache an example batch of `inputs, labels` for plotting."""
     result = getattr(self, '_example', None)
     if result is None:
       # No example batch was found, so get one from the `.train` dataset
-      result = next(iter(self.train))
+      result = next(iter(self.test))
       # And cache it for next time
       self._example = result
     return result
 
   @property
   def last_inputs(self):
-    return tf.expand_dims(tf.constant(self.test_df.iloc[-self.input_width:]),0)
+    return tf.expand_dims(tf.constant(self.test_df.iloc[-self.input_width -self.label_width :-self.label_width]),0)
+
+  def iloc_past_inputs(self,i ):
+    return tf.expand_dims(tf.constant(self.df_scaled.iloc[-self.input_width -self.label_width -i :-self.label_width - i]),0)
+  
+
+  def convert_real_outputs(self, outputs_z_score, real_inputs : pd.Series):
+
+      rolling = real_inputs.rolling(self.r_win_size)
+      sma = rolling.mean()
+      std = rolling.std()
+      real = std[-1] * outputs_z_score + sma[-1]
+
+      return real
+
+  def test_convert(self,):
+
+    close_z = z_score(self.df['Close'], self.r_win_size)
+
+    real = self.convert_real_outputs(close_z[-1], self.df['Close'][-self.r_win_size -1:-1] )
+    print("real : " + str(self.df['Close'][-1]))
+    print("computed real : " + str(real))
+
+  def predict_real_iloc(self, model, i ):
+    last_scaled_inputs = self.iloc_past_inputs(i)
+    prediction = model(last_scaled_inputs)
+    last_real_inputs = self.df[self.label_columns[0]].iloc[ - self.r_win_size - self.label_width - i: - self.label_width - i]
+    real_prediction = self.convert_real_outputs(prediction[:,:,0].numpy()[0], last_real_inputs,)
+    return real_prediction
+
+  def test_real_perfo(self, model):
+    print('eval perfo')
+    res = np.zeros(len(self.test_df))
+    err = np.zeros(len(self.test_df))
+    for i in range(len(self.test_df.index) ) :
+      prediction  = self.predict_real_iloc(model, i)[0]
+      real_value = self.df['Close'][ - self.label_width - i]
+      real_value_prev = self.df['Close'][ - 2 * self.label_width - i ]
+      err[i] = (prediction - real_value)/ real_value
+      res[i] = (real_value - real_value_prev) *  (prediction - real_value_prev)
+    print('sum : ', res.sum())
+    print('err moy :', err.mean())
+
 
   def plot(self, model=None, plot_col='Close', max_subplots=5):
     inputs, labels = self.example
+
     if model is not None:
       predictions = model(inputs)
+
     plt.figure(figsize=(12, 8))
     plot_col_index = self.column_indices[plot_col]
     max_n = min(max_subplots, len(inputs))
@@ -220,7 +307,7 @@ class FeedBack(tf.keras.Model):
     return predictions
 
 class MultiLSTM(tf.keras.Sequential):
-  def __init__(self, window, nb_units, out_steps, dropout ):
+  def __init__(self, window : WindowGenerator, nb_units, out_steps, dropout ):
     super().__init__()
     self.window = window
     # Shape [batch, time, features] => [batch, lstm_units].
@@ -231,7 +318,7 @@ class MultiLSTM(tf.keras.Sequential):
     self.add(tf.keras.layers.LSTM(nb_units[-1], return_sequences=False, dropout = dropout))
     # Shape => [batch, out_steps*features].
     self.add(tf.keras.layers.Dense(out_steps*window.num_features,
-                          kernel_initializer=tf.initializers.zeros()))
+                          kernel_initializer=tf.initializers.zeros() ))
     # Shape => [batch, out_steps, features].
     self.add(tf.keras.layers.Reshape([out_steps, window.num_features]))
 
@@ -255,10 +342,12 @@ def compile_and_fit(model, patience=2, name=None):
     model.save(os.path.join(DATA_PATH,name+'/model'))
   return history
 
-def compile_and_load(model, name):
-    compile(model)
-    model.load_weights(os.path.join(DATA_PATH,name+'/checkpoints'))
+# def compile_and_load(model, name):
+#     compile(model)
+    # model.load_weights(os.path.join(DATA_PATH,name+'/checkpoints'))
 
 def load_model(name):
     model = tf.keras.models.load_model(os.path.join(DATA_PATH,name+'/model'))
     return model
+
+
